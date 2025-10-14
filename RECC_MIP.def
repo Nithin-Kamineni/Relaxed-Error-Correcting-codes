@@ -1,0 +1,26 @@
+Bootstrap: docker
+From: ubuntu:22.04       # 22.04 has newer glibc
+
+%post
+    # Noninteractive apt
+    echo 'APT::Sandbox::User "root";' > /etc/apt/apt.conf.d/99disable-apt-sandbox
+    export DEBIAN_FRONTEND=noninteractive
+
+    apt-get update && apt-get install -y --no-install-recommends python3 python3-pip \
+      && rm -rf /var/lib/apt/lists/*
+    update-ca-certificates
+
+    pip3 install --no-cache-dir pulp networkx matplotlib numpy pandas scipy galois certifi ortools
+
+    pip3 install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cu126
+
+%environment
+    export LC_ALL=C.UTF-8
+    export LANG=C.UTF-8
+    export PYTHONUNBUFFERED=1
+
+%runscript
+    exec python3 "$@"
+
+%test
+    python3 --version && pip3 --version "quit"

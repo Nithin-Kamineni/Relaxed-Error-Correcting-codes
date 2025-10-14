@@ -1,0 +1,37 @@
+## Dr.Ewetz's storage is at blue/rewetz
+
+## Copying or pulling image from one location to another
+# cp /blue/linzhoumeng/vkamineni/monaicore0.9.1 /blue/rewetz/vkamineni/
+
+## Pull a Pre-existing Image from an External Repository
+# singularity pull --name /blue/rewetz/vkamineni/monaicore0.9.1 docker://your_docker_image_path
+
+###############################################################################
+
+apptainer build --ignore-fakeroot-command /blue/rewetz/vkamineni/RECC_MIP_v10.sif RECC_MIP.def
+
+cd Projects/Path/CircuitAnalysis/
+
+## Build a custom Image in the rewetz lab directory
+# singularity build /blue/rewetz/vkamineni/RECC_MIP_v15.sif RECC_MIP.def
+
+# Running a job in the sheduler
+# sbatch RECC_1.sh
+
+# bash RECC_2_Driver.sh
+
+
+## All your jobs in the sheduler 
+# squeue -u vkamineni
+
+## Display details of a single job
+# scontrol show job 48890533
+
+## cancel a job
+# scancel 48890533
+
+## cancel all jobs from the user
+# scancel -u vkamineni
+
+## watch to see live updates of the command
+# watch squeue -u vkamineni
