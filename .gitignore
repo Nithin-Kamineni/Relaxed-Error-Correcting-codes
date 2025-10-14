@@ -210,5 +210,5 @@ code/weights
 
 pipeline_data/*
 
-shell-script/data/*
-shell-script/logs
+shell_script/data
+shell_script/logs
