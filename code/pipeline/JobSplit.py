@@ -45,7 +45,7 @@ def split_into_job_sizes(layers: list[int], jobs: int, block: int) -> list[int]:
     return sizes
 
 
-def allocate_jobs(layers: list[int], sizes: list[int]):
+def allocate_jobs(layers: list[int], sizes: list[int], layerNames, quant_info_key_to_index):
     """
     Map each job size onto consecutive layers.
     Records both layer-relative and global flat half-open ranges.
@@ -75,13 +75,21 @@ def allocate_jobs(layers: list[int], sizes: list[int]):
                 layer_i += 1
                 off_in_layer = 0
 
+        # start_layer_name = layerNames[start_layer]
+        # end_layer_name = layerNames[layer_i]
+
+        # start_layer_index = quant_info_key_to_index[start_layer_name]
+        # end_layer_index = quant_info_key_to_index[end_layer_name]
+
         job_map.append({
             "job_index": j,
             "size": need,
             # layer-relative (end is exclusive)
             "start_layer": start_layer,
+            # "start_layer": start_layer_index,
             "start_offset_in_layer": start_off,
             "end_layer": layer_i,
+            # "end_layer": end_layer_index,
             "end_offset_in_layer": off_in_layer,
             # global flat (half-open)
             "flat_start": flat_start,
@@ -94,7 +102,7 @@ def allocate_jobs(layers: list[int], sizes: list[int]):
 def checkMaxMinValues(payload):
     max_val = -9999
     min_val = 9999
-    for layer in range(0, 122):
+    for layer in range(len(payload)):
         lst = payload['quant_info_records'][layer]['tensor_flattened']
         if(max_val<max(lst)):
             max_val = max(lst)
@@ -103,6 +111,16 @@ def checkMaxMinValues(payload):
     
     assert -128<=min_val and max_val<=127
 
+def should_skip(layername: str, tokens) -> bool:
+    return any(tok in layername for tok in tokens)
+
+SKIP_TOKENS = [
+    'running_var', 
+    # 'conv'
+    # add your own:
+    # 'num_batches_tracked', 'running_mean', ...
+]
+
 # --- loading data ---
 quant = 8 # 8 16 32
 src_filename = f"model_int{quant}_ptq.pth"
@@ -110,20 +128,26 @@ src = f"/home/vkamineni/Projects/RECC/code/weights/"+src_filename
 quant_info, num_bits, scales = load_quant_info_from_checkpoint(src)
 # editable = clone_quant_info(quant_info)
 
-quant_info_records = change_quant_info_format(quant_info)
+ordered_keys = [k for k in quant_info.keys() if not should_skip(k, SKIP_TOKENS)]
+quant_info_key_to_index = {k:i for i,k in enumerate(quant_info.keys())}
+
+filtered_quant_info = {k: quant_info[k] for k in ordered_keys}
+
+quant_info_records = change_quant_info_format(filtered_quant_info)
 
 # --- build sizes and allocate ---
 jobs = 12
 single_process = 63
-layers = [quant_info[k][0].numel() for k in quant_info]  # lengths per layer
+layers = [quant_info[k][0].numel() for k in ordered_keys]  # lengths per layer
 
 sizes = split_into_job_sizes(layers, jobs, single_process)
-job_map = allocate_jobs(layers, sizes)
-
+job_map = allocate_jobs(layers, sizes, ordered_keys, quant_info_key_to_index)
+skip_layers = {quant_info_key_to_index[k]:k for k in quant_info.keys() if should_skip(k, SKIP_TOKENS)}
 
 payload = {
     "quant_info_records": quant_info_records,     # records is a list: [{}, {}...]
-    "job_map": job_map # dict: {job_index: {...}}
+    "job_map": job_map, # dict: {job_index: {...}}
+    "skip_layers": skip_layers
 }
 
 checkMaxMinValues(payload)

@@ -4,6 +4,10 @@ from pathlib import Path
 import torch
 import numpy as np
 
+def load_original_quant(path: str):
+    payload = torch.load(path, map_location="cpu")
+    return payload
+
 path = "/home/vkamineni/Projects/RECC/pipeline_data/quant_and_job_info.json"
 with open(path, "r", encoding="utf-8") as f:
     data = json.load(f)
@@ -21,7 +25,10 @@ for fp in sorted(dir_path.glob("*.json"), key=lambda x:int(x.stem)):  # sorted f
         data = json.load(f)
         nums.extend(data)
 
-new_quant_info = {'qstate_dict':{}, 'meta':{'num_bits':8, 'scales':{}}}
+weights_argument_original = "/home/vkamineni/Projects/RECC/code/weights/model_int8_ptq.pth"
+# new_quant_info = {'qstate_dict':{}, 'meta':{'num_bits':8, 'scales':{}}}
+new_quant_info = load_original_quant(weights_argument_original)
+
 print('len(nums)',len(nums))
 complete_index=0
 for i in range(len(quant_info_records)):

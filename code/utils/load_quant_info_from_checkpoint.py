@@ -21,3 +21,28 @@ def clone_quant_info(quant_info: dict):
         # clone() to decouple from the loaded tensors; keep dtype/device
         editable[name] = (q.clone(), s)
     return editable
+
+def revert_back_some_layers(editable: dict, original:dict, select_layers: list):
+    TotalCount = 0
+    SkippedCount = 0
+
+    keys = list(editable.keys())
+
+    #verify
+    for idx in range(len(editable)):
+        k = keys[idx]
+        _, s1 = original[k]
+        _, s2 = original[k]
+        assert s1==s2, "scales not same"
+
+    for idx in range(len(editable)):
+        k = keys[idx]
+        if(idx in select_layers):
+            # editable[k] = deepcopy(original[k])
+            # editable[k] = original[k]
+            t, s = original[k]
+            editable[k] = (t.clone(), s)
+            SkippedCount += editable[k][0].numel()
+        TotalCount += editable[k][0].numel()
+
+    return editable, TotalCount, SkippedCount

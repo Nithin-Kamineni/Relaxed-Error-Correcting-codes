@@ -97,14 +97,14 @@ for pp in range(math.ceil(len(AllWeightsInJob)/63)):
         # print('chunk',chunk)
 
         start_time = time.time()
-        # mutated_chunk2 = OptimizedParityFittingWeightsEncodeAndDecode(
-        #             chunk,
-        #             message_parity_size=message_parity_size,
-        #             message_size=message_size,
-        #             # warm_start=mutated_chunk["sliced_message_bits"],
-        #             solver='cpsat'
-        #         )
-        mutated_chunk2 = chunk
+        mutated_chunk2 = OptimizedParityFittingWeightsEncodeAndDecode(
+                    chunk,
+                    message_parity_size=message_parity_size,
+                    message_size=message_size,
+                    # warm_start=mutated_chunk["sliced_message_bits"],
+                    solver='cpsat'
+                )
+        # mutated_chunk2 = chunk
         mutated_chunks2.append(mutated_chunk2)
         durations.append(time.time()-start_time)
 
