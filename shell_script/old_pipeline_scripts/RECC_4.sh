@@ -1,10 +1,11 @@
 #!/bin/bash
-#SBATCH --partition=hpg-default
+#SBATCH --partition=hpg-turin
+#SBATCH --gres=gpu:l4:1
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=16
-#SBATCH --mem=64gb
-#SBATCH --time=72:00:00
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=24GB
+#SBATCH --time=24:00:00
 #SBATCH --output=logs/%x.%j.out
 
 date;hostname;pwd
@@ -13,11 +14,6 @@ date;hostname;pwd
 # Load Singularity
 module load singularity
 module load cplex/12.9
-
-# Verify CPU & binding for debugging:
-# lscpu | egrep 'Model name|MHz|NUMA|Thread|CPU\(s\):'
-echo "SLURM_CPUS_PER_TASK=${SLURM_CPUS_PER_TASK:-<unset>}"
-echo "SLURM_TRES_PER_TASK=${SLURM_TRES_PER_TASK:-<unset>}"
 
 # Figure out the CPLEX binary from the module's env
 # Most CPLEX modules export something like CPLEX_STUDIO_DIR129
@@ -41,21 +37,25 @@ fi
 echo "Using CPLEX binary: ${CPEX_BIN}"
 
 CPLEX_BIND_ROOT="$(dirname "$(dirname "$(dirname "${CPEX_BIN}")")")"   # -> /apps/cplex/12.9
-SIF="/blue/rewetz/vkamineni/RECC_MIP_v15.sif"
-Execute_File="/home/vkamineni/Projects/RECC/code/pipeline/MergeOutputs.py"
-# Execute_File="/home/vkamineni/Projects/RECC/code/excecution/ortools-test.py"
+SIF="/blue/rewetz/vkamineni/RECC_MIP_v14.sif"
+Execute_File="/home/vkamineni/Projects/RECC/code/dynamic_pipeline/TestModel.py"
 # Execute_File="/home/vkamineni/Projects/RECC/code/test2.py"
 
-# SLURM_CPUS_PER_TASK=16
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+export VECLIB_MAXIMUM_THREADS=1
+export PYTHONHASHSEED=0
 
-  # --env OMP_NUM_THREADS=1 --env OPENBLAS_NUM_THREADS=1 --env MKL_NUM_THREADS=1 \
-  # --env NUMEXPR_NUM_THREADS=1 --env VECLIB_MAXIMUM_THREADS=1 \
+SLURM_CPUS_PER_TASK=32
 
 # Execute your Python script inside the container
-srun --cpu-bind=cores --mem-bind=local \
 singularity exec \
   --bind "${CPLEX_BIND_ROOT}:${CPLEX_BIND_ROOT}" \
   --env CPEX_BIN="${CPEX_BIN}" \
   --env SLURM_CPUS_PER_TASK="${SLURM_CPUS_PER_TASK}" \
+  --env OMP_NUM_THREADS=1 --env OPENBLAS_NUM_THREADS=1 --env MKL_NUM_THREADS=1 \
+  --env NUMEXPR_NUM_THREADS=1 --env VECLIB_MAXIMUM_THREADS=1 \
   --nv "${SIF}" \
   python3 "${Execute_File}"

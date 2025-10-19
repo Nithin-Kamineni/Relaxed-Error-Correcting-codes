@@ -7,7 +7,7 @@ import math
 from collections.abc import Iterable
 from typing import Dict, Any, List, Tuple
 from collections import Counter
-from utils.solve_mod2_mip_weighted_per_spans import solve_mod2_mip_weighted_per_spans
+# from utils.solve_mod2_mip_weighted_per_spans import solve_mod2_mip_weighted_per_spans
 from utils.solve_parity_fit_cpsat import solve_parity_fit_cpsat
 
 def OptimizedParityFittingWeightsEncodeAndDecode(
@@ -67,17 +67,18 @@ def OptimizedParityFittingWeightsEncodeAndDecode(
 
     if(solver=="cplex"):
         # Solve MIP on full vector with index mapping
-        mutated_message_bits, objective_change, status = solve_mod2_mip_weighted_per_spans(
-            encoding_parity_matrix=encoding_parity_matrix,
-            original_message_bits=original_message_bits_slice,
-            original_bits_weights=original_bits_weights_slice,
-            message_indices=message_indices,
-            parity_indices=parity_indices,
-            number_spans=original_nums_spans,
-            time_limit_sec=60,
-            use_cplex=True,
-            warm_start=warm_start
-        )
+        # mutated_message_bits, objective_change, status = solve_mod2_mip_weighted_per_spans(
+        #     encoding_parity_matrix=encoding_parity_matrix,
+        #     original_message_bits=original_message_bits_slice,
+        #     original_bits_weights=original_bits_weights_slice,
+        #     message_indices=message_indices,
+        #     parity_indices=parity_indices,
+        #     number_spans=original_nums_spans,
+        #     time_limit_sec=60,
+        #     use_cplex=True,
+        #     warm_start=warm_start
+        # )
+        pass
 
     elif(solver=="cpsat"):
         mutated_message_bits, objective_change, status = solve_parity_fit_cpsat(

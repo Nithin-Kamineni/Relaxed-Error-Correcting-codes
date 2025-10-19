@@ -13,7 +13,7 @@ apptainer build --ignore-fakeroot-command /blue/rewetz/vkamineni/RECC_MIP_v10.si
 cd Projects/Path/CircuitAnalysis/
 
 ## Build a custom Image in the rewetz lab directory
-# singularity build /blue/rewetz/vkamineni/RECC_MIP_v15.sif RECC_MIP.def
+# singularity build /blue/rewetz/vkamineni/RECC_MIP_v17.sif RECC_MIP.def
 
 # Running a job in the sheduler
 # sbatch RECC_1.sh

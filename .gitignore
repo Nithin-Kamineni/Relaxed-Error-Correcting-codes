@@ -212,3 +212,7 @@ pipeline_data/*
 
 shell_script/data
 shell_script/logs
+
+shell_script/pipeline_scripts/logs
+shell_script/pipeline_scripts/data
+shell_script/pipeline_scripts/core.python3-6-1760581973-6745-3176-c0706a-s18.ufhpc.3074769

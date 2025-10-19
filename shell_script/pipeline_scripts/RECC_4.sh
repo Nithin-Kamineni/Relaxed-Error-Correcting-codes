@@ -37,8 +37,8 @@ fi
 echo "Using CPLEX binary: ${CPEX_BIN}"
 
 CPLEX_BIND_ROOT="$(dirname "$(dirname "$(dirname "${CPEX_BIN}")")")"   # -> /apps/cplex/12.9
-SIF="/blue/rewetz/vkamineni/RECC_MIP_v14.sif"
-Execute_File="/home/vkamineni/Projects/RECC/code/pipeline/TestModel.py"
+SIF="/blue/rewetz/vkamineni/RECC_MIP_v16.sif"
+Execute_File="/home/vkamineni/Projects/RECC/code/dynamic_pipeline/TestModel.py"
 # Execute_File="/home/vkamineni/Projects/RECC/code/test2.py"
 
 export OMP_NUM_THREADS=1
@@ -49,6 +49,14 @@ export VECLIB_MAXIMUM_THREADS=1
 export PYTHONHASHSEED=0
 
 SLURM_CPUS_PER_TASK=32
+
+# put these before singularity exec
+export SSL_CERT_FILE=$(python - <<'PY'
+import certifi, sys
+print(certifi.where())
+PY
+)
+export CURL_CA_BUNDLE="$SSL_CERT_FILE"
 
 # Execute your Python script inside the container
 singularity exec \
