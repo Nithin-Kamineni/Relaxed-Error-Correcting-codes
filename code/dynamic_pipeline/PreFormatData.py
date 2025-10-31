@@ -1,4 +1,3 @@
-
 import json, gzip, os
 from typing import Dict, Tuple, List
 import torch
@@ -53,9 +52,26 @@ SKIP_TOKENS = [
 
 # --- loading data ---
 quant = 8 # 8 16 32
-src = f"/home/vkamineni/Projects/RECC/code/weights/model_int{quant}_ptq.pth"
+
+ARTIFACT_PATH = os.getenv("ARTIFACT_PATH", "cifar10/resnet18/model_int8_ptq.pth")
+
+art_path = Path(ARTIFACT_PATH)
+# src = f"/home/vkamineni/Projects/RECC/code/weights/model_int{quant}_ptq.pth"
+# src = f"/home/vkamineni/Projects/RECC/code/trainAndQuantize/shell-scripts/artifacts/models/cifar10/resnet34/model_int8_ptq.pth"
+src = f"/home/vkamineni/Projects/RECC/code/trainAndQuantize/shell-scripts/artifacts/models/{ARTIFACT_PATH}"
 quant_info, num_bits, scales = load_quant_info_from_checkpoint(src)
 # editable = clone_quant_info(quant_info)
+
+dir_path = str(art_path.parent)
+file_stem  = art_path.stem
+
+base = Path("/home/vkamineni/Projects/RECC/pipeline_data/artifact_loaded_data")
+target_dir = base / dir_path
+target_dir.mkdir(parents=True, exist_ok=True)
+
+npy_out_path = target_dir / f"{file_stem}.all_weights.npy"
+
+
 
 ordered_keys = [k for k in quant_info.keys() if not should_skip(k, SKIP_TOKENS)]
 quant_info_key_to_index = {k:i for i,k in enumerate(quant_info.keys())}
@@ -64,17 +80,12 @@ filtered_quant_info = {k: quant_info[k] for k in ordered_keys}
 
 quant_info_records = change_quant_info_format(filtered_quant_info)
 
-# --- build sizes and allocate ---
-jobs = 12
-single_process = 63
-
 AllWeights = []
 for i in range(len(quant_info_records)):
     print(quant_info_records[i]['layername'], len(quant_info_records[i]['tensor_flattened']))
     AllWeights.extend(quant_info_records[i]['tensor_flattened'])
     print('len(AllWeights)',len(AllWeights))
 
-npy_out_path  = '/home/vkamineni/Projects/RECC/pipeline_data/all_weights.int8.npy'
 all_weights_np = np.asarray(AllWeights, dtype=np.int8)
 all_weights_np_u8 = (all_weights_np.astype(np.int16) + 128).astype(np.uint8)
 np.save(npy_out_path, all_weights_np_u8, allow_pickle=False)
@@ -85,7 +96,7 @@ payload = {
 
 checkMaxMinValues(payload)
 
-json_out_path  = '/home/vkamineni/Projects/RECC/pipeline_data/quant_info.json'
+json_out_path = target_dir / f"{file_stem}.quant_info.json"
 with open(json_out_path, "w", encoding="utf-8") as f:
     # separators to reduce size; ensure ascii-safe
     json.dump(payload, f, separators=(",", ":"))

@@ -3,12 +3,37 @@ from math import prod
 from pathlib import Path
 import torch
 import numpy as np
+import os
+
+ARTIFACT_PATH = os.getenv("ARTIFACT_PATH", "cifar10/resnet18/model_int8_ptq.pth")
+art_path = Path(ARTIFACT_PATH)
+dir_path = str(art_path.parent)
+file_stem  = art_path.stem
+base = Path("/home/vkamineni/Projects/RECC/pipeline_data/artifact_loaded_data")
+target_dir = base / dir_path
+QUANT_INFO_JSON = target_dir / f"{file_stem}.quant_info.json"
+
+message_parity_size = CHUNK_SIZE = int(os.getenv("CODEWORD", 63))
+t_value = int(os.getenv("Tvalue", 2))
+OUT_DIR_BASE     = Path("/home/vkamineni/Projects/RECC/pipeline_data/chunk_outputs")      # per-process JSONL files here
+MessageEncoding = f"M{message_parity_size}_t{t_value}"
+Approch = os.getenv("Approch", "parfit")
+Approch = 'no' if Approch not in ('parfit','replace','no') else Approch
+OUT_DIR     = OUT_DIR_BASE/dir_path/MessageEncoding/Approch
+
+ORIG_CHECKPOINT = f"/home/vkamineni/Projects/RECC/code/trainAndQuantize/shell-scripts/artifacts/models/{ARTIFACT_PATH}"
+
+output_ckpt_base = Path("/home/vkamineni/Projects/RECC/pipeline_data/processed_payload")      # per-process JSONL files here
+OUT_CKPT_directory = output_ckpt_base/dir_path/MessageEncoding/Approch
+OUT_CKPT_directory.mkdir(parents=True, exist_ok=True)
+OUT_CKPT = output_ckpt_base/dir_path/MessageEncoding/Approch/art_path.name
+
 
 # -------- paths (edit if needed) --------
-OUT_DIR = Path("/home/vkamineni/Projects/RECC/pipeline_data/chunk_outputs")
-QUANT_INFO_JSON = "/home/vkamineni/Projects/RECC/pipeline_data/quant_info.json"
-ORIG_CHECKPOINT = "/home/vkamineni/Projects/RECC/code/weights/model_int8_ptq.pth"
-OUT_CKPT = "/home/vkamineni/Projects/RECC/pipeline_data/new_quant_info.pth"
+# OUT_DIR = Path("/home/vkamineni/Projects/RECC/pipeline_data/chunk_outputs")
+# QUANT_INFO_JSON = "/home/vkamineni/Projects/RECC/pipeline_data/quant_info.json"
+# ORIG_CHECKPOINT = "/home/vkamineni/Projects/RECC/code/weights/model_int8_ptq.pth"
+# OUT_CKPT = "/home/vkamineni/Projects/RECC/pipeline_data/new_quant_info.pth"
 
 # -------- load quant_info metadata (shapes, scales, layer order) --------
 with open(QUANT_INFO_JSON, "r", encoding="utf-8") as f:

@@ -25,7 +25,7 @@ from utils.messageSliceBasedOnChunkSize import messageSliceBasedOnChunkSize
 from utils.reconstruct_numbers_from_chunks import reconstruct_numbers_from_chunks
 
 
-# from implementations.ParityOverwriteByTopWeightsEncode import ParityOverwriteByTopWeightsEncode
+from implementations.ParityOverwriteByTopWeightsEncode import ParityOverwriteByTopWeightsEncode
 from implementations.OptimizedParityFittingWeightsEncodeAndDecode import OptimizedParityFittingWeightsEncodeAndDecode
 
 NandTvaluesToKvalues = {
@@ -33,7 +33,7 @@ NandTvaluesToKvalues = {
         1 : 57, 2: 51, 3: 45, 4: 39, 5: 36, 6: 30,  7: 24,  8: 18
     },
     127 : {
-        4 : 99, 5: 92, 6: 85, 7: 78, 8: 71, 9: 71, 10: 64, 11: 57, 12: 50
+        1 : 120, 2 : 113, 3 : 106, 4 : 99, 5: 92, 6: 85, 7: 78, 8: 71, 9: 71, 10: 64, 11: 57, 12: 50
     },
     255 : {
         8 : 191, 9: 187, 10: 179, 11: 171, 12: 163, 13: 155, 14: 147, 15: 139, 16: 131
@@ -43,11 +43,26 @@ NandTvaluesToKvalues = {
 # ---------------------------
 # Tunables
 # ---------------------------
-MEMMAP_PATH = "/home/vkamineni/Projects/RECC/pipeline_data/all_weights.int8.npy"
-OUT_DIR     = "/home/vkamineni/Projects/RECC/pipeline_data/chunk_outputs"      # per-process JSONL files here
+ARTIFACT_PATH = os.getenv("ARTIFACT_PATH", "cifar10/resnet18/model_int8_ptq.pth")
+art_path = Path(ARTIFACT_PATH)
+dir_path = str(art_path.parent)
+file_stem  = art_path.stem
+base = Path("/home/vkamineni/Projects/RECC/pipeline_data/artifact_loaded_data")
+target_dir = base / dir_path
+MEMMAP_PATH = target_dir / f"{file_stem}.all_weights.npy"
+
 P = 24                   # processes
-message_parity_size = CHUNK_SIZE = 63
-message_size = 45
+message_parity_size = CHUNK_SIZE = int(os.getenv("CODEWORD", 63))
+t_value = int(os.getenv("Tvalue", 2))
+message_size = NandTvaluesToKvalues[message_parity_size][t_value]
+
+Approch = os.getenv("Approch", "parfit")
+Approch = 'no' if Approch not in ('parfit','replace','no') else Approch
+
+OUT_DIR_BASE     = Path("/home/vkamineni/Projects/RECC/pipeline_data/chunk_outputs")      # per-process JSONL files here
+MessageEncoding = f"M{message_parity_size}_t{t_value}"
+OUT_DIR     = OUT_DIR_BASE/dir_path/MessageEncoding/Approch      # per-process JSONL files here
+OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 def _assign_affinity_for_worker(p: int, cpus_per_worker: int = 3):
     # Get the cpuset Slurm gave this job step (48 logical CPUs here)
@@ -85,14 +100,22 @@ def process_payload(values):
     mutated_chunks2 = []
     count=0
     for chunk in chunks:
-        mutated_chunk2 = OptimizedParityFittingWeightsEncodeAndDecode(
-                    chunk,
-                    message_parity_size=message_parity_size,
-                    message_size=message_size,
-                    # warm_start=mutated_chunk["sliced_message_bits"],
-                    solver='cpsat'
-                )
-        # mutated_chunk2 = chunk
+        if(Approch=='replace'):
+            mutated_chunk2 = ParityOverwriteByTopWeightsEncode(
+                            chunk,
+                            message_parity_size=message_parity_size,
+                            message_size=message_size,
+                          )
+        elif(Approch=='parfit'):
+            mutated_chunk2 = OptimizedParityFittingWeightsEncodeAndDecode(
+                        chunk,
+                        message_parity_size=message_parity_size,
+                        message_size=message_size,
+                        # warm_start=mutated_chunk["sliced_message_bits"],
+                        solver='cpsat'
+                    )
+        else:
+            mutated_chunk2 = chunk
         mutated_chunks2.append(mutated_chunk2)
 
         reconstructed_chunks2 = reconstruct_numbers_from_chunks(mutated_chunks2)
@@ -108,7 +131,8 @@ def process_payload(values):
 # Worker
 # ---------------------------
 def worker(p: int, next_idx: mp.Value, lock: mp.Lock, N: int, chunk_size: int, batch_claim: int = 1):
-    grp = _assign_affinity_for_worker(p, cpus_per_worker=3)
+    grp = _assign_affinity_for_worker(p, cpus_per_worker=2)
+    # grp = _assign_affinity_for_worker(p, cpus_per_worker=1)
     if p == 0: print(f"[affinity] worker {p} -> CPUs {grp}")
 
     arr = np.load(MEMMAP_PATH, mmap_mode="r")   # dtype=int8, shape=(N,), no RAM copy
@@ -138,7 +162,7 @@ def worker(p: int, next_idx: mp.Value, lock: mp.Lock, N: int, chunk_size: int, b
                 "distorsion":distorsion,
                 "status": "ok"
             }
-            if(next_idx.value%(63*1000)==0):
+            if(next_idx.value%(CHUNK_SIZE*1000)==0):
                 print("Progress",time.time(),rec)
 
             f.write(json.dumps(rec) + "\n")
@@ -200,6 +224,7 @@ if __name__ == "__main__":
 
     print(f"MEMMAP_PATH={MEMMAP_PATH}")
     print(f"N={N:,}  processes={P}  chunk_size={CHUNK_SIZE}")
+    print('message_size:',message_size)
     
     procs = []
     for p in range(P):

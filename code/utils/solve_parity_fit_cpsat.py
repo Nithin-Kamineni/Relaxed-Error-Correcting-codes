@@ -127,7 +127,7 @@ def solve_parity_fit_cpsat(
     solver = cp_model.CpSolver()
     if time_limit_sec is not None and time_limit_sec > 0:
         solver.parameters.max_time_in_seconds = float(time_limit_sec)
-    solver.parameters.num_search_workers = int(threads)  # 0 = all cores
+    solver.parameters.num_search_workers = 0  # 0 = all cores
 
     solver.parameters.cp_model_presolve = True  # default
     # solver.parameters.search_branching = cp_model.AUTOMATIC
@@ -135,8 +135,8 @@ def solve_parity_fit_cpsat(
     # solver.parameters.search_branching = cp_model.PORTFOLIO_SEARCH
     solver.parameters.symmetry_level = 1
     solver.parameters.linearization_level = 2
-    solver.parameters.relative_gap_limit = float(0.01)
-    solver.parameters.absolute_gap_limit = float(4)
+    solver.parameters.relative_gap_limit = float(0.1)
+    # solver.parameters.absolute_gap_limit = float(5)
 
     status = solver.Solve(model)
     status_name = solver.StatusName(status)

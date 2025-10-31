@@ -25,7 +25,9 @@ arch_argument = "resnet18"
 
 start_time = time.time()
 
-weights_argument = "/home/vkamineni/Projects/RECC/code/weights/model_int8_ptq.pth"
+# weights_argument = "/home/vkamineni/Projects/RECC/code/weights/model_int8_ptq.pth"
+ARTIFACT_PATH = os.getenv("ARTIFACT_PATH", "cifar10/resnet18/model_int8_ptq.pth")
+weights_argument = f"/home/vkamineni/Projects/RECC/code/trainAndQuantize/shell-scripts/artifacts/models/{ARTIFACT_PATH}"
 
 loader, nc = cifar_test_loader(dataset_argument, batch_size_argument)
 device = torch.device(device_argument)
@@ -46,8 +48,14 @@ print('duration 1', time.time()-start_time)
 
 start_time = time.time()
 
-weights_argument = "/home/vkamineni/Projects/RECC/pipeline_data/resnet18_parityM63T2.pth"
-# weights_argument = "/home/vkamineni/Projects/RECC/pipeline_data/new_quant_info.pth"
+# weights_argument = "/home/vkamineni/Projects/RECC/pipeline_data/resnet18_parityM6T1_All_MIP.pth"
+
+# weights_argument = "/home/vkamineni/Projects/RECC/pipeline_data/resnet18_parityM127T1_All_MIP.pth"
+# weights_argument = "/home/vkamineni/Projects/RECC/pipeline_data/resnet18_replaceM127T3.pth"
+
+# weights_argument = "/home/vkamineni/Projects/RECC/pipeline_data/resnet18_parityM6T6_All_MIP.pth"
+EvalModel = os.getenv("EvalModel", "cifar10/resnet18/M63_t2/no/model_int8_ptq.pth")
+weights_argument = "/home/vkamineni/Projects/RECC/pipeline_data/processed_payload/"+EvalModel
 # weights_argument = "/home/vkamineni/Projects/RECC/code/weights/model_int8_ptq.pth"
 
 loader, nc = cifar_test_loader(dataset_argument, batch_size_argument)
@@ -59,14 +67,14 @@ print(f"[Loaded] {weights_argument} → {tag}\n")
 
 layers = count_learnable_layers(model)
 acc_lst = []
-for _ in range(10):
-    total_p, train_p = param_counts(model)
-    print(f"\n[Layers] learnable modules: {layers}")
-    print(f"[Params] total: {total_p:,}  trainable: {train_p:,}")
 
-    acc = evaluate(model, loader, device)
-    acc_lst.append(acc)
-    print(f"\n[Test accuracy] {acc:.2f}% on {dataset_argument}")
+total_p, train_p = param_counts(model)
+print(f"\n[Layers] learnable modules: {layers}")
+print(f"[Params] total: {total_p:,}  trainable: {train_p:,}")
+
+acc = evaluate(model, loader, device)
+acc_lst.append(acc)
+print(f"\n[Test accuracy] {acc:.2f}% on {dataset_argument}")
 
 print('avg(acc)',sum(acc_lst)/len(acc_lst))
 print('duration 2', time.time()-start_time)
